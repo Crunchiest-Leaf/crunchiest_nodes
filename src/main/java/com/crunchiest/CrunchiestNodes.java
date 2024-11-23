@@ -30,6 +30,7 @@ public class CrunchiestNodes extends JavaPlugin {
         getCommand("nodebuilder").setTabCompleter(new NodeCommandTabCompleter());
         getCommand("nodedeleter").setExecutor(nodeBuilderCommand);
         getCommand("nodedeleter").setTabCompleter(new NodeCommandTabCompleter());
+        getCommand("nodehighlighter").setExecutor(nodeBuilderCommand);
 
         // Register event listener
         getServer().getPluginManager().registerEvents(new NodeEventListener(this, dbManager), this);

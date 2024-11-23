@@ -1,14 +1,20 @@
 package com.crunchiest.commands;
 
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import com.crunchiest.CrunchiestNodes;
 import com.crunchiest.database.DatabaseManager;
@@ -20,6 +26,7 @@ public class NodeBuilderCommand implements CommandExecutor {
     private final DatabaseManager dbManager;
     private final Set<UUID> nodeBuilders = new HashSet<>();
     private final Set<UUID> nodeDeleters = new HashSet<>();
+    private final Set<UUID> nodeHighlighters = new HashSet<>();
 
     public NodeBuilderCommand(CrunchiestNodes plugin, DatabaseManager dbManager) {
         this.plugin = plugin;
@@ -74,9 +81,57 @@ public class NodeBuilderCommand implements CommandExecutor {
 
             nodeDeleters.add(playerUUID);
             player.sendMessage(ChatColor.GREEN + "Node deletion mode enabled. Left-click nodes to delete them. Run the command again to disable.");
+        } else if (label.equalsIgnoreCase("nodehighlighter")) {
+            if (nodeHighlighters.contains(playerUUID)) {
+                nodeHighlighters.remove(playerUUID);
+                player.sendMessage(ChatColor.GREEN + "Node highlighting mode disabled.");
+                return true;
+            }
+
+            nodeHighlighters.add(playerUUID);
+            player.sendMessage(ChatColor.GREEN + "Node highlighting mode enabled. Nodes within 30 blocks will flash for 10 seconds.");
+
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!nodeHighlighters.contains(playerUUID)) {
+                        cancel();
+                        return;
+                    }
+
+                    Location playerLocation = player.getLocation();
+                    for (int x = -30; x <= 30; x++) {
+                        for (int y = -30; y <= 30; y++) {
+                            for (int z = -30; z <= 30; z++) {
+                                Block block = playerLocation.clone().add(x, y, z).getBlock();
+                                try {
+                                    if (isNode(block)) {
+                                        Material originalMaterial = block.getType();
+                                        player.sendBlockChange(block.getLocation(), Material.WHITE_CONCRETE.createBlockData());
+                                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                                            player.sendBlockChange(block.getLocation(), originalMaterial.createBlockData());
+                                        }, 10L);
+                                    }
+                                } catch (SQLException ex) {
+                                }
+                            }
+                        }
+                    }
+                }
+            }.runTaskTimer(plugin, 0L, 20L);
+
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                nodeHighlighters.remove(playerUUID);
+                player.sendMessage(ChatColor.GREEN + "Node highlighting mode automatically disabled after 10 seconds.");
+            }, 200L); // 10 seconds later
         }
 
         return true;
+    }
+
+    private boolean isNode(Block block) throws SQLException {
+      int nodeId = dbManager.getNodeId(block.getWorld().getName(), block.getX(), block.getY(), block.getZ());
+        return nodeId != -1;
     }
 
     public boolean isNodeBuilder(UUID playerUUID) {
