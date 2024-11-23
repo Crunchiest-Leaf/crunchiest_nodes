@@ -8,10 +8,12 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.FixedMetadataValue;
 
 import com.crunchiest.CrunchiestNodes;
 import com.crunchiest.database.DatabaseManager;
-import com.crunchiest.util.ItemStackSerializer;
+
+import net.md_5.bungee.api.ChatColor;
 
 public class NodeBuilderCommand implements CommandExecutor {
     private final CrunchiestNodes plugin;
@@ -27,7 +29,7 @@ public class NodeBuilderCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be run by a player.");
+            sender.sendMessage(ChatColor.RED + "This command can only be run by a player.");
             return true;
         }
 
@@ -37,51 +39,55 @@ public class NodeBuilderCommand implements CommandExecutor {
         if (label.equalsIgnoreCase("nodebuilder")) {
             if (nodeBuilders.contains(playerUUID)) {
                 nodeBuilders.remove(playerUUID);
-                player.sendMessage("Node registration mode disabled.");
+                player.sendMessage(ChatColor.GREEN + "Node registration mode disabled.");
                 return true;
             }
 
             if (args.length < 3) {
-                player.sendMessage("Usage: /nodebuilder <cooldown> <global|player> <tool|better>");
+                player.sendMessage(ChatColor.GREEN + "Usage: /nodebuilder <cooldown> <global|player> <tool|better>");
                 return true;
             }
 
             long cooldown;
             try {
-                cooldown = Long.parseLong(args[0]);
+              cooldown = Long.parseLong(args[0]) * 60 * 1000;
             } catch (NumberFormatException e) {
-                player.sendMessage("Invalid cooldown value.");
+                player.sendMessage(ChatColor.RED + "Invalid cooldown value.");
                 return true;
             }
 
             boolean isGlobal = args[1].equalsIgnoreCase("global");
             boolean requireBetterTool = args[2].equalsIgnoreCase("better");
 
-            try {
-                String itemStackSerialized = ItemStackSerializer.serialize(player.getInventory().getItemInOffHand());
-                String toolSerialized = ItemStackSerializer.serialize(player.getInventory().getItemInMainHand());
-                dbManager.registerNode(player.getWorld().getName(), player.getLocation().getBlockX(), player.getLocation().getBlockY(), player.getLocation().getBlockZ(), itemStackSerialized, toolSerialized, cooldown, isGlobal, requireBetterTool);
-                player.sendMessage("Node registered successfully.");
-                nodeBuilders.add(playerUUID);
-                player.sendMessage("Node registration mode enabled. Run the command again to disable.");
-            } catch (Exception e) {
-                player.sendMessage("Failed to register node: " + e.getMessage());
-            }
+            player.setMetadata("nodebuilder_cooldown", new FixedMetadataValue(plugin, cooldown));
+            player.setMetadata("nodebuilder_isGlobal", new FixedMetadataValue(plugin, isGlobal));
+            player.setMetadata("nodebuilder_requireBetterTool", new FixedMetadataValue(plugin, requireBetterTool));
+
+            nodeBuilders.add(playerUUID);
+            player.sendMessage(ChatColor.GREEN + "Node registration mode enabled. Click a block to register it as a node. Run the command again to disable.");
         } else if (label.equalsIgnoreCase("nodedeleter")) {
             if (nodeDeleters.contains(playerUUID)) {
                 nodeDeleters.remove(playerUUID);
-                player.sendMessage("Node deletion mode disabled.");
+                player.sendMessage(ChatColor.GREEN + "Node deletion mode disabled.");
                 return true;
             }
 
             nodeDeleters.add(playerUUID);
-            player.sendMessage("Node deletion mode enabled. Left-click nodes to delete them. Run the command again to disable.");
+            player.sendMessage(ChatColor.GREEN + "Node deletion mode enabled. Left-click nodes to delete them. Run the command again to disable.");
         }
 
         return true;
     }
 
+    public boolean isNodeBuilder(UUID playerUUID) {
+        return nodeBuilders.contains(playerUUID);
+    }
+
     public boolean isNodeDeleter(UUID playerUUID) {
         return nodeDeleters.contains(playerUUID);
+    }
+
+    public void removeNodeBuilder(UUID playerUUID) {
+        nodeBuilders.remove(playerUUID);
     }
 }

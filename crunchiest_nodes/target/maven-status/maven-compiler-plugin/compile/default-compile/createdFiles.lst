@@ -1,6 +1,0 @@
-com\crunchiest\database\DatabaseManager.class
-com\crunchiest\models\CooldownBlock.class
-com\crunchiest\listeners\NodeEventListener.class
-com\crunchiest\CrunchiestNodes.class
-com\crunchiest\commands\NodeBuilderCommand.class
-com\crunchiest\util\ItemStackSerializer.class

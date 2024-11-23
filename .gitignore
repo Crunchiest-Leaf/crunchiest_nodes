@@ -1,0 +1,25 @@
+# Java and Maven specific ignores
+target/**
+!target/*.jar
+
+
+# Maven specific ignores
+mvnw
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# VS Code specific ignores
+.vscode/**
+
+# OS specific ignores
+.DS_Store
+Thumbs.db
+
+# Log, lock and temporary files
+*.log
+*.lock
+*.tmp
+
+# Bukkit plugin specific ignores
+plugins/
+server.log

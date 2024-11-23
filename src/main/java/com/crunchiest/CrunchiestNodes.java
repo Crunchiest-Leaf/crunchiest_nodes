@@ -5,6 +5,7 @@ import java.util.logging.Logger;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.crunchiest.commands.NodeBuilderCommand;
+import com.crunchiest.commands.complete.NodeCommandTabCompleter;
 import com.crunchiest.database.DatabaseManager;
 import com.crunchiest.listeners.NodeEventListener;
 
@@ -17,21 +18,21 @@ public class CrunchiestNodes extends JavaPlugin {
     public void onEnable() {
         LOGGER.info("crunchiest_nodes plugin enabled");
 
-        // Initialize database
+        dbManager = new DatabaseManager();
         try {
-            dbManager = new DatabaseManager();
             dbManager.connect();
-            // Perform any necessary database setup
         } catch (Exception e) {
             LOGGER.severe("Failed to connect to the database: " + e.getMessage());
         }
 
-                // Register command
-                nodeBuilderCommand = new NodeBuilderCommand(this, dbManager);
-                this.getCommand("nodebuilder").setExecutor(nodeBuilderCommand);
+        nodeBuilderCommand = new NodeBuilderCommand(this, dbManager);
+        getCommand("nodebuilder").setExecutor(nodeBuilderCommand);
+        getCommand("nodebuilder").setTabCompleter(new NodeCommandTabCompleter());
+        getCommand("nodedeleter").setExecutor(nodeBuilderCommand);
+        getCommand("nodedeleter").setTabCompleter(new NodeCommandTabCompleter());
 
-                // Register event listener
-                getServer().getPluginManager().registerEvents(new NodeEventListener(this, dbManager), this);
+        // Register event listener
+        getServer().getPluginManager().registerEvents(new NodeEventListener(this, dbManager), this);
     }
 
     @Override
@@ -39,7 +40,6 @@ public class CrunchiestNodes extends JavaPlugin {
         LOGGER.info("crunchiest_nodes plugin disabled");
         // Close database connection
         try {
-            DatabaseManager dbManager = new DatabaseManager();
             dbManager.disconnect();
         } catch (Exception e) {
             LOGGER.severe("Failed to disconnect from the database: " + e.getMessage());
@@ -47,6 +47,6 @@ public class CrunchiestNodes extends JavaPlugin {
     }
 
     public NodeBuilderCommand getNodeBuilderCommand() {
-      return this.nodeBuilderCommand;
-   }
+        return nodeBuilderCommand;
+    }
 }

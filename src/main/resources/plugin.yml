@@ -1,0 +1,12 @@
+name: crunchiest_nodes
+main: com.crunchiest.CrunchiestNodes
+version: 0.0.1
+api-version: '1.20'
+
+commands:
+  nodebuilder:
+    description: Toggles node registration mode.
+    usage: /nodebuilder <cooldown> <global|player> <tool|better>
+  nodedeleter:
+    description: Toggles node deletion mode.
+    usage: /nodedeleter
