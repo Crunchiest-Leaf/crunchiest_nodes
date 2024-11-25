@@ -100,7 +100,7 @@ public class NodeBuilderCommand implements CommandExecutor {
             }
 
             nodeHighlighters.add(playerUUID);
-            player.sendMessage(ChatColor.GREEN + "Node highlighting mode enabled. Nodes within 30 blocks will flash for 10 seconds.");
+            player.sendMessage(ChatColor.GREEN + "Node highlighting mode enabled. Nodes within 10 blocks will flash for 10 seconds.");
 
             new BukkitRunnable() {
                 @Override

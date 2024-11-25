@@ -304,8 +304,20 @@ public class NodeEventListener implements Listener {
      */
     private boolean isToolValid(ItemStack playerTool, ItemStack requiredTool, boolean requireBetterTool) {
         if (requireBetterTool) {
-            // Check if the player's tool is equal to or better than the required tool
-            return playerTool.getType().getMaxDurability() >= requiredTool.getType().getMaxDurability();
+            // Extract the tool type from the tool ID
+            String playerToolType = playerTool.getType().name().split("_")[1];
+            String requiredToolType = requiredTool.getType().name().split("_")[1];
+
+            // Check if the tools are of the same type (e.g., both are pickaxes)
+            if (!playerToolType.equals(requiredToolType)) {
+                return false;
+            }
+
+            // Use durability to rank the tools
+            int playerToolDurability = playerTool.getType().getMaxDurability();
+            int requiredToolDurability = requiredTool.getType().getMaxDurability();
+
+            return playerToolDurability >= requiredToolDurability;
         } else {
             // Check if the player's tool is the same as the required tool
             return playerTool.isSimilar(requiredTool);
