@@ -1,9 +1,12 @@
 package com.crunchiest.commands;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -50,6 +53,11 @@ public class NodeBuilderCommand implements CommandExecutor {
                 return true;
             }
 
+            if (nodeDeleters.contains(playerUUID)) {
+                nodeDeleters.remove(playerUUID);
+                player.sendMessage(ChatColor.GREEN + "Node deletion mode disabled.");
+            }
+
             if (args.length < 3) {
                 player.sendMessage(ChatColor.GREEN + "Usage: /nodebuilder <cooldown> <global|player> <tool|better>");
                 return true;
@@ -57,7 +65,7 @@ public class NodeBuilderCommand implements CommandExecutor {
 
             long cooldown;
             try {
-              cooldown = Long.parseLong(args[0]) * 60 * 1000;
+                cooldown = Long.parseLong(args[0]) * 60 * 1000;
             } catch (NumberFormatException e) {
                 player.sendMessage(ChatColor.RED + "Invalid cooldown value.");
                 return true;
@@ -78,7 +86,10 @@ public class NodeBuilderCommand implements CommandExecutor {
                 player.sendMessage(ChatColor.GREEN + "Node deletion mode disabled.");
                 return true;
             }
-
+            if (nodeBuilders.contains(playerUUID)) {
+                nodeBuilders.remove(playerUUID);
+                player.sendMessage(ChatColor.GREEN + "Node registration mode disabled.");
+            }
             nodeDeleters.add(playerUUID);
             player.sendMessage(ChatColor.GREEN + "Node deletion mode enabled. Left-click nodes to delete them. Run the command again to disable.");
         } else if (label.equalsIgnoreCase("nodehighlighter")) {
@@ -100,25 +111,42 @@ public class NodeBuilderCommand implements CommandExecutor {
                     }
 
                     Location playerLocation = player.getLocation();
-                    for (int x = -30; x <= 30; x++) {
-                        for (int y = -30; y <= 30; y++) {
-                            for (int z = -30; z <= 30; z++) {
-                                Block block = playerLocation.clone().add(x, y, z).getBlock();
-                                try {
-                                    if (isNode(block)) {
-                                        Material originalMaterial = block.getType();
-                                        player.sendBlockChange(block.getLocation(), Material.WHITE_CONCRETE.createBlockData());
-                                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                                            player.sendBlockChange(block.getLocation(), originalMaterial.createBlockData());
-                                        }, 10L);
+                    int radius = 10;
+                    List<Block> blocksToHighlight = new ArrayList<>();
+
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            for (int x = -radius; x <= radius; x++) {
+                                for (int y = -radius; y <= radius; y++) {
+                                    for (int z = -radius; z <= radius; z++) {
+                                        Block block = playerLocation.clone().add(x, y, z).getBlock();
+                                        try {
+                                            if (isNode(block)) {
+                                                blocksToHighlight.add(block);
+                                            }
+                                        } catch (SQLException ex) {
+                                            ex.printStackTrace();
+                                        } catch (InterruptedException | ExecutionException ex) {
+                                        }
                                     }
-                                } catch (SQLException ex) {
                                 }
                             }
+
+                            // Schedule the block change updates to run on the main thread
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                for (Block block : blocksToHighlight) {
+                                    Material originalMaterial = block.getType();
+                                    player.sendBlockChange(block.getLocation(), Material.WHITE_CONCRETE.createBlockData());
+                                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                                        player.sendBlockChange(block.getLocation(), originalMaterial.createBlockData());
+                                    }, 5L);
+                                }
+                            });
                         }
-                    }
+                    }.runTaskAsynchronously(plugin);
                 }
-            }.runTaskTimer(plugin, 0L, 20L);
+            }.runTaskTimer(plugin, 0L, 10L);
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 nodeHighlighters.remove(playerUUID);
@@ -129,8 +157,8 @@ public class NodeBuilderCommand implements CommandExecutor {
         return true;
     }
 
-    private boolean isNode(Block block) throws SQLException {
-      int nodeId = dbManager.getNodeId(block.getWorld().getName(), block.getX(), block.getY(), block.getZ());
+    private boolean isNode(Block block) throws SQLException, InterruptedException, ExecutionException {
+        int nodeId = dbManager.getNodeId(block.getWorld().getName(), block.getX(), block.getY(), block.getZ()).get();
         return nodeId != -1;
     }
 
